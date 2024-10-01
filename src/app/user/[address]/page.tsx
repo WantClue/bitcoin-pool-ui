@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Bitcoin, Clock, Award } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 
 const HashRateChart = dynamic(() => import('@/components/HashRateChart'), { ssr: false })
 
@@ -19,19 +21,47 @@ interface UserData {
   worker: WorkerData[];
 }
 
-async function getUserData(address: string): Promise<UserData> {
-  const response = await fetch(`https://solo.ckpool.org/users/${address}`, { next: { revalidate: 60 } })
-  return response.json()
+async function getUserData(address: string): Promise<UserData | null> {
+  try {
+    const response = await fetch(`https://solo.ckpool.org/users/${address}`, { 
+      next: { revalidate: 60 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    return await response.json()
+  } catch (error) {
+    console.error("Failed to fetch user data:", error)
+    return null
+  }
 }
 
 export default async function UserStats({ params }: { params: { address: string } }) {
   const userData = await getUserData(params.address)
 
+  if (!userData) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
+        <h1 className="text-4xl font-bold text-center text-red-400">Failed to load user data. Please try again later.</h1>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold mb-8 text-center text-green-400">User Statistics</h1>
-        
+        <div className="flex justify-between items-center mb-8">
+          <Link href="/">
+            <Button variant="outline" className="bg-green-500 text-gray-900 hover:bg-green-600">
+              Back to Home
+            </Button>
+          </Link>
+          <h1 className="text-4xl font-bold text-center text-green-400">User Statistics</h1>
+          <div className="w-[100px]"></div> {/* This empty div balances the layout */}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="bg-gray-800 border-green-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
